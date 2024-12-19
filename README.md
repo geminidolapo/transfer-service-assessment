@@ -88,7 +88,7 @@ mvn test
 ```
 
 #### 2. Integration Tests
-To test the APIs locally, you can use tools like Postman or cURL.
+https://documenter.getpostman.com/view/26196556/2sAYJ3D1BE#da9cce31-a522-4740-a38a-d53cc253c46d
 
 ---
 # **7. Dockerization**
