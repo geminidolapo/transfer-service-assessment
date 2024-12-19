@@ -32,6 +32,14 @@ public class TransactionService {
     private final ExternalRequestProperties properties;
 
 
+    /**
+     * Processes a transfer transaction between two accounts.
+     *
+     * @param transactionReq the transaction request containing details such as source account number,
+     *                       destination account number, reference, amount, and currency.
+     * @return an ApiResponse containing a TransactionRes object if the transaction is successful,
+     *         or an error message if the transaction fails.
+     */
     public ApiResponse<TransactionRes> processTransfer(TransactionReq transactionReq) {
         log.info("Starting transfer process: Source Account = {}, Destination Account = {}, Reference = {}",
                 transactionReq.getSourceAccountNumber(), transactionReq.getDestinationAccountNumber(), transactionReq.getReference());
@@ -124,6 +132,17 @@ public class TransactionService {
     }
 
 
+    /**
+     * Retrieves a paginated list of transactions based on the provided filters.
+     *
+     * @param status               the status of the transactions to filter by (e.g., SUCCESSFUL, FAILED).
+     * @param sourceAccountNumber  the source account number to filter transactions by.
+     * @param destinationAccountNumber the destination account number to filter transactions by.
+     * @param startDate            the start date for the transaction creation date filter, in "yyyy-MM-dd HH:mm:ss" format.
+     * @param endDate              the end date for the transaction creation date filter, in "yyyy-MM-dd HH:mm:ss" format.
+     * @param pageable             the pagination information, including page number and size.
+     * @return an ApiResponse containing a Page of TransactionRes objects that match the specified filters.
+     */
     public ApiResponse<Page<TransactionRes>> getTransactions(String status, String sourceAccountNumber,
                                                              String destinationAccountNumber, String startDate,
                                                              String endDate, Pageable pageable) {
@@ -180,6 +199,18 @@ public class TransactionService {
         return ApiResponse.success(getTransactionSummary(startOfDay,endOfDay));
     }
 
+    /**
+     * Generates a summary of transactions for a specified time period.
+     * This method fetches all transactions within the given time range and calculates
+     * various metrics such as total transactions, total amount, total commission,
+     * and counts of successful and failed transactions.
+     *
+     * @param start The start date and time of the period for which to generate the summary.
+     * @param end The end date and time of the period for which to generate the summary.
+     * @return A TransactionSummaryRes object containing the calculated metrics for the specified period.
+     *         This includes the total number of transactions, counts of successful and failed transactions,
+     *         total transaction amount, and total commission earned.
+     */
     public TransactionSummaryRes getTransactionSummary(LocalDateTime start, LocalDateTime end) {
         log.info("Starting transaction summary for period: {} to {}", start, end);
 

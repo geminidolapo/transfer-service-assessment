@@ -25,6 +25,22 @@ public class ScheduledTasks {
     private final TransactionService transactionService;
     public static final ZoneId ZONE_ID = ZoneId.of("Africa/Lagos");
 
+    /**
+     * Processes commissions for successful transactions from the previous day.
+     * This method is scheduled to run daily at 1 AM.
+     * 
+     * The process involves:
+     * 1. Retrieving all successful transactions from the previous day.
+     * 2. Calculating and setting the commission for each transaction.
+     * 3. Marking each processed transaction as commission-worthy.
+     * 4. Saving the updated transaction information.
+     * 
+     * The commission is calculated as a percentage of the transaction fee,
+     * where the percentage is defined in the application properties.
+     * 
+     * Any errors during the processing of individual transactions are logged,
+     * but do not stop the overall process.
+     */
     @Scheduled(cron = "0 0 1 * * ?") // Daily at 1 AM
     public void processCommissions() {
         log.info("Starting commission processing task...");
@@ -53,6 +69,20 @@ public class ScheduledTasks {
     }
 
 
+    /**
+     * This method runs daily at 2 AM
+     * It retrieves the transactions for the previous day (from midnight to the end of the day),
+     * generates a summary, and logs the results.
+     *
+     * Steps:
+     * 1. Retrieves the start and end times for the previous day.
+     * 2. Calls the transaction service to compute the summary for the specified date range.
+     * 3. Logs the summary generation details (e.g., date range, success message).
+     * 4. Placeholder for sending the summary via email (to be implemented).
+     *
+     * Note:
+     * - Future enhancements can include sending the summary to a specified recipient via email.
+     */
     @Scheduled(cron = "0 0 2 * * ?") // Daily at 2 AM
     public void generateDailySummary() {
         log.info("Starting daily summary generation task...");
