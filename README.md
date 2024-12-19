@@ -34,7 +34,7 @@ A simple Java web application simulating money transfer operations between bank 
 ```bash
 git clone https://github.com/geminidolapo/transfer-service-assessment.git
 ```
-#### Clean up the application 
+#### Clean up the application  
 ```bash
 cd transfer-service-assessment
 ``` 
@@ -55,13 +55,13 @@ mvn spring-boot:run
 - **Description**: Processes a money transfer request.
 - **Request Body**:
 ```
-        { 
-            "reference":"test transfer",
-            "amount":5.00,
-            "currency":"USD",
-            "sourceAccountNumber":"1234567890",
-            "destinationAccountNumber":"2113182084"
-        }
+    { 
+        "reference":"test transfer",
+        "amount":5.00,
+        "currency":"USD",
+        "sourceAccountNumber":"1234567890",
+        "destinationAccountNumber":"2113182084"
+    }
 ```
 
 ### 2. Retrieve Transactions
