@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transfer-service-assessment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: transfer-service-assessment
+  template:
+    metadata:
+      labels:
+        app: transfer-service-assessment
+    spec:
+      containers:
+        - name: transfer-service
+          image: transfer-service-assessment:latest
+          ports:
+            - containerPort: 8080
