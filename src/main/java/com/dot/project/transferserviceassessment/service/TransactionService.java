@@ -1,8 +1,10 @@
 package com.dot.project.transferserviceassessment.service;
 
 import com.dot.project.transferserviceassessment.config.ExternalRequestProperties;
+import com.dot.project.transferserviceassessment.constant.CurrencyEnum;
 import com.dot.project.transferserviceassessment.constant.StatusEnum;
 import com.dot.project.transferserviceassessment.dao.entity.Transaction;
+import com.dot.project.transferserviceassessment.dao.entity.TransactionAccount;
 import com.dot.project.transferserviceassessment.dao.repository.TransactionRepository;
 import com.dot.project.transferserviceassessment.dto.request.TransactionReq;
 import com.dot.project.transferserviceassessment.dto.response.ApiResponse;
@@ -41,65 +43,100 @@ public class TransactionService {
      *         or an error message if the transaction fails.
      */
     public ApiResponse<TransactionRes> processTransfer(TransactionReq transactionReq) {
-        log.info("Starting transfer process: Source Account = {}, Destination Account = {}, Reference = {}",
+        log.info("Starting transfer process. Source Account = {}, Destination Account = {}, Reference = {}",
                 transactionReq.getSourceAccountNumber(), transactionReq.getDestinationAccountNumber(), transactionReq.getReference());
 
-        // Fetch source and destination account details
+        // Fetch and log account details
         final var sourceAccount = accountService.accountEnquiry(transactionReq.getSourceAccountNumber());
+        logAccountDetails(sourceAccount, "Source");
         final var destinationAccount = accountService.accountEnquiry(transactionReq.getDestinationAccountNumber());
+        logAccountDetails(destinationAccount, "Destination");
 
-        log.info("Source Account: {}, Balance: {}, Currency: {}",
-                sourceAccount.getAccountNumber(), sourceAccount.getBalance(), sourceAccount.getCurrency());
-        log.info("Destination Account: {}, Balance: {}, Currency: {}",
-                destinationAccount.getAccountNumber(), destinationAccount.getBalance(), destinationAccount.getCurrency());
-
-        // Build the transaction object
+        // Build transaction object
         final var transaction = buildTransaction(transactionReq);
         log.info("Transaction initialized: {}", transaction);
 
-        // Check for currency mismatches
-        if (!sourceAccount.getCurrency().equals(transactionReq.getCurrency())) {
-            String errorMessage = String.format("Currency mismatch for Source Account: %s, Expected: %s, Provided: %s",
-                    sourceAccount.getAccountNumber(), sourceAccount.getCurrency(), transactionReq.getCurrency());
-            log.warn(errorMessage);
-            return handleTransactionFailure(transaction, StatusEnum.FAILED, errorMessage);
+        // Validation checks
+        if (isSameAccount(sourceAccount, destinationAccount)) {
+            return handleValidationFailure(transaction, "Source and destination accounts cannot be the same");
         }
 
-        if (!destinationAccount.getCurrency().equals(transactionReq.getCurrency())) {
-            String errorMessage = String.format("Currency mismatch for Destination Account: %s, Expected: %s, Provided: %s",
-                    destinationAccount.getAccountNumber(), destinationAccount.getCurrency(), transactionReq.getCurrency());
-            log.warn(errorMessage);
-            return handleTransactionFailure(transaction, StatusEnum.FAILED, errorMessage);
+        if (isCurrencyMismatch(sourceAccount, transactionReq.getCurrency(), "Source")
+                || isCurrencyMismatch(destinationAccount, transactionReq.getCurrency(), "Destination")) {
+            return handleValidationFailure(transaction, "Currency mismatch detected");
         }
 
-        // Check for insufficient funds
-        if (sourceAccount.getBalance().compareTo(transaction.getBilledAmount()) < 0) {
-            String errorMessage = String.format("Insufficient funds for Source Account: %s, Balance: %s, Requested: %s",
-                    sourceAccount.getAccountNumber(), sourceAccount.getBalance(), transaction.getBilledAmount());
-            log.warn(errorMessage);
-            return handleTransactionFailure(transaction, StatusEnum.INSUFFICIENT_FUND, errorMessage);
+        if (hasInsufficientFunds(sourceAccount, transaction.getBilledAmount())) {
+            return handleValidationFailure(transaction, "Insufficient funds in source account");
         }
 
         // Perform the transfer
         try {
-            log.info("Debiting Source Account: {}, Amount: {}", sourceAccount.getAccountNumber(), transactionReq.getAmount());
-            accountService.debitAccount(sourceAccount, transaction.getBilledAmount());
-
-            log.info("Crediting Destination Account: {}, Amount: {}", destinationAccount.getAccountNumber(), transaction.getAmount());
-            accountService.creditAccount(destinationAccount, transaction.getAmount());
-
-            transaction.setStatus(StatusEnum.SUCCESSFUL);
-            transaction.setStatusMessage("Transaction Successful");
-            transactionRepository.save(transaction);
-
-            log.info("Transaction completed successfully: Source Account = {}, Reference = {}",
+            executeTransfer(transactionReq, sourceAccount, destinationAccount, transaction);
+            log.info("Transaction completed successfully. Source Account = {}, Reference = {}",
                     sourceAccount.getAccountNumber(), transactionReq.getReference());
             return ApiResponse.success(new TransactionRes(transaction));
-
         } catch (Exception e) {
+            // TODO: Reversal process(Event Driven)
             log.error("Error during transfer process for Reference: {}", transactionReq.getReference(), e);
             return handleTransactionFailure(transaction, StatusEnum.FAILED, "An error occurred during transaction processing");
         }
+    }
+
+    private void logAccountDetails(TransactionAccount account, String accountType) {
+        log.info("{} Account: {}, Balance: {}, Currency: {}",
+                accountType, account.getAccountNumber(), account.getBalance(), account.getCurrency());
+    }
+
+    private boolean isSameAccount(TransactionAccount source, TransactionAccount destination) {
+        if (source.getAccountNumber().equals(destination.getAccountNumber())) {
+            log.warn("Validation failed: Source and destination accounts are the same. Account = {}", source.getAccountNumber());
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isCurrencyMismatch(TransactionAccount account, CurrencyEnum expectedCurrency, String accountType) {
+        if (!account.getCurrency().equals(expectedCurrency)) {
+            log.warn("Validation failed: Currency mismatch for {} Account = {}, Expected = {}, Provided = {}",
+                    accountType, account.getAccountNumber(), account.getCurrency(), expectedCurrency);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean hasInsufficientFunds(TransactionAccount source, BigDecimal requiredAmount) {
+        if (source.getBalance().compareTo(requiredAmount) < 0) {
+            log.warn("Validation failed: Insufficient funds for Source Account = {}, Balance = {}, Required = {}",
+                    source.getAccountNumber(), source.getBalance(), requiredAmount);
+            return true;
+        }
+        return false;
+    }
+
+    private void executeTransfer(TransactionReq transactionReq, TransactionAccount sourceAccount, TransactionAccount destinationAccount, Transaction transaction) {
+        log.info("Debiting Source Account: {}, Amount: {}", sourceAccount.getAccountNumber(), transactionReq.getAmount());
+        accountService.debitAccount(sourceAccount, transaction.getBilledAmount());
+
+        log.info("Crediting Destination Account: {}, Amount: {}", destinationAccount.getAccountNumber(), transaction.getAmount());
+        accountService.creditAccount(destinationAccount, transaction.getAmount());
+
+        transaction.setStatus(StatusEnum.SUCCESSFUL);
+        transaction.setStatusMessage("Transaction Successful");
+        transactionRepository.save(transaction);
+    }
+
+    private ApiResponse<TransactionRes> handleValidationFailure(Transaction transaction, String errorMessage) {
+        log.warn("Validation error: {}", errorMessage);
+        return handleTransactionFailure(transaction, StatusEnum.FAILED, errorMessage);
+    }
+
+    private ApiResponse<TransactionRes> handleTransactionFailure(Transaction transaction, StatusEnum status, String message) {
+        transaction.setStatus(status);
+        transaction.setStatusMessage(message);
+        transactionRepository.save(transaction);
+        log.info("Transaction failed. Status = {}, Message = {}, Reference = {}", status, message, transaction.getReference());
+        return ApiResponse.error(message);
     }
 
 
@@ -119,16 +156,6 @@ public class TransactionService {
     private BigDecimal calculateFee(BigDecimal transactionAmount) {
         BigDecimal fee = transactionAmount.multiply(new BigDecimal(properties.getFeePercentage())); // Percentage of amount
         return fee.min(new BigDecimal(properties.getFeeCap())); // Apply cap
-    }
-
-    private ApiResponse<TransactionRes> handleTransactionFailure(Transaction transaction, StatusEnum status, String statusMessage) {
-        log.error("Transaction failed. Status: {}, Reason: {}", status, statusMessage);
-        transaction.setStatus(status);
-        transaction.setStatusMessage(statusMessage);
-        transactionRepository.save(transaction);
-        log.info("Transaction saved with failure status: {}", transaction);
-
-        return ApiResponse.failed(new TransactionRes(transaction));
     }
 
 
@@ -237,7 +264,8 @@ public class TransactionService {
         log.info("Counted {} successful transactions.", successfulTransactions);
 
         long failedTransactions = transactions.stream()
-                .filter(transaction -> StatusEnum.FAILED.equals(transaction.getStatus()))
+                .filter(transaction -> StatusEnum.FAILED.equals(transaction.getStatus()) ||
+                        StatusEnum.INSUFFICIENT_FUND.equals(transaction.getStatus()))
                 .count();
         log.info("Counted {} failed transactions.", failedTransactions);
 

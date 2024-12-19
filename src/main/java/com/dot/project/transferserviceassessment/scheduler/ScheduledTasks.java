@@ -93,10 +93,9 @@ public class ScheduledTasks {
                 yesterdayStartOfDayMidnight, yesterdayEndOfDay);
 
         final var summary = transactionService.getTransactionSummary(yesterdayStartOfDayMidnight,yesterdayEndOfDay);
-
-        // TODO: send email
-
         log.info("Daily summary generated successfully for date: {}", yesterdayStartOfDayMidnight);
+
+        // TODO: send email asychronously
     }
 
     private LocalDateTime getYesterdayStartOfDay() {
