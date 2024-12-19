@@ -33,7 +33,7 @@ A simple Java web application simulating money transfer operations between bank 
 ### **Clone the Repository**
 ```bash
 git clone https://github.com/geminidolapo/transfer-service-assessment.git
-cd bank-transfer-app
+cd transfer-service-assessment
 
 mvn clean install
 mvn spring-boot:run  
