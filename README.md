@@ -32,7 +32,7 @@ A simple Java web application simulating money transfer operations between bank 
 # **4. Installation Instructions**
 ### **Clone the Repository**
 ```bash
-git clone https://github.com/your-repository-url/bank-transfer-app.git
+git clone https://github.com/geminidolapo/transfer-service-assessment.git
 cd bank-transfer-app
 
 mvn clean install
