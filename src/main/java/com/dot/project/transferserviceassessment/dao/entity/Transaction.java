@@ -4,17 +4,15 @@ import com.dot.project.transferserviceassessment.constant.CurrencyEnum;
 import com.dot.project.transferserviceassessment.constant.StatusEnum;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Objects;
 
 @Getter
 @Setter
 @Entity
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 @Where(clause="deleted=false")
@@ -24,7 +22,7 @@ import java.util.Objects;
                 @Index(name = "transaction_idx_1", columnList = "reference, amount, created_at, status"),
                 @Index(name = "transaction_idx_2", columnList = "source_account_number,destination_account_number")
         })
-public class Transaction {
+public class Transaction extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -47,11 +45,6 @@ public class Transaction {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-//    @CreationTimestamp
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
     @Enumerated(EnumType.STRING)
     private StatusEnum status; // SUCCESSFUL, INSUFFICIENT FUND, FAILED
 
@@ -68,17 +61,4 @@ public class Transaction {
 
     @Column(name = "destination_account_number", nullable = false, length = 20)
     private String destinationAccountNumber;
-
-    @Builder.Default
-    @Column(columnDefinition="tinyint(1) default 0")
-    private boolean deleted = Boolean.FALSE;
-
-    @PrePersist
-    private void prePersist() {
-        if (Objects.isNull(this.createdAt)) {
-            this.setCreatedAt(
-                    LocalDateTime.now(ZoneId.of("Africa/Lagos"))
-            );
-        }
-    }
 }

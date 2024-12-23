@@ -4,24 +4,22 @@ import com.dot.project.transferserviceassessment.constant.AccountStatusEnum;
 import com.dot.project.transferserviceassessment.constant.CurrencyEnum;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Where;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
-@Builder
 @Getter
 @Setter
 @Entity
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 @Where(clause="deleted=false")
 @SQLDelete(sql="UPDATE transaction_account SET deleted=true WHERE id=?")
 @Table(name = "transaction_account", indexes = @Index(name = "transaction_account_idx",
                 columnList = "account_number, created_at, account_status"))
-public class TransactionAccount {
+public class TransactionAccount extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -44,18 +42,4 @@ public class TransactionAccount {
     @Column(name = "account_status")
     @Enumerated(EnumType.STRING)
     private AccountStatusEnum accountStatus = AccountStatusEnum.ACTIVE;
-
-    @CreationTimestamp
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @Builder.Default
-    @Column(columnDefinition="tinyint(1) default 0")
-    private boolean deleted = Boolean.FALSE;
 }
